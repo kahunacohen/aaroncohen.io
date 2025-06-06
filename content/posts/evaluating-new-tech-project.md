@@ -2,6 +2,7 @@
 date = '2021-06-06T14:36:08+03:00'
 draft = true
 title = 'Evaluating New Tech Project'
+tags = ["technology", "programming", "best practices"]
 +++
 
 Programmers often face a dilema when coming into an existing project: whether to work with what they have, or start fresh (either entirely or with sections of the code). Because code is harder to read than write, how do we objectively judge how we should approach this dilema? The question is important because we will soon own what we've inherited. 

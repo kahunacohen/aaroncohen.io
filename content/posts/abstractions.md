@@ -2,6 +2,8 @@
 date = '2021-07-08T00:00:00+00:00'
 draft = true
 title = 'Abstractions'
+tags = ["technology", "best practices", "programming"]
+
 +++
 
 We rely on abstractions to make sense of the world. Your dog is not really a "dog." There's no such thing. The word is a generalization for a group of entities that share a similar genetic make-up. But it's easier to just say, "dog," and we all understand because we generally agree on the things the word stands for.
