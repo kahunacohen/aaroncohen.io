@@ -12,41 +12,20 @@ That's what this post aims to clarify.
 
 I'm no k8s expert. I've been picking it up because I'm interested in the devops
 space and because I see the problem domain it solves in my daily work. I've
-found the best way to learn something is to simply start working with it. Even
-better, is to write about it, as writing reinforces what you learned. If you can't
-explain something clearly, then you don't really understand it.
+found the best way to learn something is to simply start working with it. 
 
-In this series of posts we'll develop a basic expressjs server, use k8s to develop
-locally and deploy it to a production environment. We'll take it step-by-step.
+In this series of posts I'll develop a basic expressjs server and use k8s to develop
+locally and deploy it. We'll take it step-by-step.
 After the first post we'll have an expressjs server running and be able to
 deploy it via k8s to a development environment. In further posts we'll explore
 local development, secret management, production clusters and stateful
 components, like databases.
 
-This post assumes a basic knowledge of building and working with
-containerized applications. Maybe you've played with them on a toy project, or
-maybe you're read a lot about them. Regardless you understand the basic
-concepts of Docker or Docker-like tools. This won't be a container tutorial.
-aaroncohen.io — inspiration in, ideas out
-Exploring Kubernetes
-admin July 21, 2021
+This post assumes a basic knowledge of building and working with containerized applications. Maybe you've played with them on a toy project, or maybe you're read a lot about them. Regardless you understand the basic concepts of Docker. 
 
-Table of Contents
+## What is K8s & What Does it Solve?
 
-1. What is K8s & What Does it Solve?
-2. Do You Need It?
-3. Let’s Go
-4. The App
-5. Containerize It
-
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 1/20
-
-What is K8s & What Does it Solve?
-
-k8s is a container orchestrator. It can declaratively manage the configuration,
-running state, and deployments of a cluster of containerized applications. If
+k8s is a container orchestrator. It declaratively manages the configuration,     state, and deployments of a cluster of containerized applications. If
 you've ever had to tell a client that you need to bring an app down for
 maintenance, tried to do rolling updates, do A/B testing, scale your app, or
 recover from your app going down then you understand the pain k8s solves.
@@ -58,27 +37,14 @@ desired number of container instances running. k8s maintains this state, not
 just when you explicitly update the application, but also when a container
 terminates unexpectedly.
 
-Do You Need It?
+## Do You Need It?
 
 If any of the following applies, you may want to explore k8s. Your app:
 
-requires close to 100% up-time
-has many users, or you project it will
-has users who are very active at certain times, but not others
-requires A/B testing
-6. Pushing the Image
-7. Move to k8s
-8. k8s Architecture
-9. Creating a Deployment
-10. Creating a Service
-11. Bring Down a Pod
-12. Non-sensitive Run-time Data
-13. Jobs
-14. Updating App Code
-
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 2/20
+1. requires close to 100% up-time
+1. has many users
+1. has users who are very active at certain times, but not others
+1. requires A/B testing
 
 Like any framework, k8s adds complexity, and there's a learning curve. If
 that's not appealing, then you could still containerize your app, run the image
@@ -88,7 +54,7 @@ repository, and restart the service.
 Even if you don't need it, it may be worth exploring k8s because it's become
 such a ubiquitous and influential tool in devops.
 
-Let’s Go
+## Let’s Go
 
 We're going to take a quick tour of k8s basics by building a toy app. We'll
 build an Expressjs server, containerize it and run it in a local k8s cluster.
