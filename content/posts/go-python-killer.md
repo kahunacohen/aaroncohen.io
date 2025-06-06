@@ -2,6 +2,7 @@
 date = '2021-07-07T15:11:40+03:00'
 draft = true
 title = 'Golang: a Python Killer?'
+tags = ["programming", "technology", "golang"]
 +++
 
 [Golang](https://go.dev/) is a newer-generation (2009) multi-purpose programming language developed by Google to address the challenges of software-development at-scale and concurrent programming.
