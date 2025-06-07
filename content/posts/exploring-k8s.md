@@ -58,67 +58,62 @@ such a ubiquitous and influential tool in devops.
 
 We're going to take a quick tour of k8s basics by building a toy app. We'll
 build an Expressjs server, containerize it and run it in a local k8s cluster.
-The completed files from this tutorial are in github. A cluster (very simply) is
+The completed files from this tutorial are in [github](https://github.com/kahunacohen/hello-k8s/tree/1). A cluster (very simply) is
 a group of "pods" running at least one container.
 
 We will need the following tools:
 
-Install Docker Desktop if it's not already installed. Under
+1. Install [Docker Desktop](https://docs.docker.com/desktop/) if it's not already installed. Under
 settings/preferences enable Kubernetes.
-Install minikube, which allows you to run kubernetes locally.
-Install kubectl, the CLI for k8s.
-If you don't already have a docker hub account, create one now.
+1. Install [minikube](https://minikube.sigs.k8s.io/docs/start), which allows you to run kubernetes locally.
+1. Install [kubectl](https://kubernetes.io/docs/tasks/tools/), the CLI for k8s.
+1. If you don't already have a docker hub account, [create one](https://app.docker.com/signup) now.
 
-The App
+## The App
 
-The server we'll build is just one route. Create a new directory called hello-
-k8s. cd into it. Ensure you have a recent version of node installed locally, or
-
-use nvm to install an isolated version of node. The latest stable version of
+The server we'll build is just one route. Create a new directory called `hello-
+k8s`. `cd` into it. Ensure you have a recent version of node installed locally, or
+use [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) to install an isolated version of node. The latest stable version of
 node will do. Once that's installed do:
 
+```
 $ npm init
 ...
 $ npm install express --save
-
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 3/20
-
+```
 Now copy this JavaScript to a file called server.js in the root of the directory:
 
+```javascript
 const process = require("process");
 const express = require("express");
 const app = express();
+
 app.get("/", (req, res) => {
 res.send(`<h1>Kubernetes Expressjs Example</h2>
-<h2>Non-Secret Configuration Example</h2>
-<ul>
-<li>MY_NON_SECRET: "${process.env.MY_NON_SECRET}"</li>
-<li>MY_OTHER_NON_SECRET: "${process.env.MY_OTHER_NON_SECRET}"</li>
-</ul>
-`);
+    <h2>Non-Secret Configuration Example</h2>
+    <ul>
+    <li>MY_NON_SECRET: "${process.env.MY_NON_SECRET}"</li>
+    <li>MY_OTHER_NON_SECRET: "${process.env.MY_OTHER_NON_SECRET}"</li>
+    </ul>
+    `);
 });
 app.listen(3000, () => {
-console.log("Listening on http://localhost:3000");
+    console.log("Listening on http://localhost:3000");
 });
+```
 
-Run: $ node ./server.js and go to http://localhost:3000 to ensure the
-app runs. The "non secret" data should render as "undefined" for now.
+Run: `$ node ./server.js` and go to http://localhost:3000 to ensure the
+app runs. The "non secret" data should render as `undefined` for now.
 
-Containerize It
+## Containerize It
 
 Now let's containerize our app. Create a dockerhub account if you don't have
-one already. This is where we will pull and push images from and to.
+one already. This is where we will pull and push images.
 
 We'll create a Dockerfile at the root of the directory, which as you know, is a
-declarative way to define how your app's image should be built. I've added a
-few comments that may help you avoid common performance/security pitfalls
-when creating Dockerfiles:
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
+declarative way to define how your app's image should be built:
 
-https://aaroncohen.io/exploring-kubernetes/ 4/20
-
+```dockerfile
 from node:14.17.3
 
 RUN useradd -ms /bin/bash appuser && mkdir /code && chown -R appuser /code
@@ -130,55 +125,27 @@ COPY server.js /code/
 
 USER appuser
 CMD ["node", "server.js"]
+```
 
-Let's build it: $ docker build -t {DOCKER_HUB_USERNAME}/hello-k8s .
+Let's build it: `$ docker build -t {DOCKER_HUB_USERNAME}/hello-k8s`.
 
-And now run it: $ docker run -d -p 3000:3000
-{DOCKER_HUB_USERNAME}/hello-k8s. Go to http://localhost:3000, and you
+And now run it: `$ docker run -d -p 3000:3000
+{DOCKER_HUB_USERNAME}/hello-k8s`. Go to http://localhost:3000, and you
 should see the app running. Again, the non secrets will print out as null. Don't
 worry about that for now.
 
-Now let's stop the running container. Do docker ps to get its ID, and stop it: $
-docker stop {CONTAINER_ID}.
+Now let's stop the running container. Do `docker ps` to get its ID, and stop it: `$ docker stop {CONTAINER_ID}`.
 
-We've accomplished a few things by containerizing the app:
-
-1. Our environment is completely reprodicible, including the OS the app is
-run on. If, for example, we need to configure the OS specifically for the app
-(say add some C libraries), we can do that in the Dockerfile and exactly
-# Use explicit version of node, not LTS
-
-# Create a non-priviliged user to run the process (server.js).
-# The code should be owned by root, not world-writable, but run as the non-roo
-
-# Dependencies are less likely to change than app code
-# and are slow to install so create layers relating to npm early
-# and the actual app code which will change frequently later.
-
-# Run the main process as the less priviliged user.
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 5/20
-
-reproduce the app's environment on another developer's machine, in a CI
-build, or in production.
-2. This allows us to much more confidently spin up/down our app because we
-can quickly reproduce it dependencies from a common baseline.
-
-Pushing the Image
+## Pushing the Image
 Because we don't want to have to build the image on target machines, once we
 build the image we'll want to push the image to dockerhub. Let's now push the
 image you created to your account: $ docker push
-{DOCKER_HUB_USERNAME}/hello-k8s. You may have to run: $ docker login first.
+{DOCKER_HUB_USERNAME}/hello-k8s. You may have to run: `$ docker login` first.
 Pushing the image the first time may take a while.
 
-Move to k8s
+## Move to k8s
 
-We could stop here and simply build/tag our image after each change to the
-app, pull it down on the host machine, and run it using docker or docker
-compose (if you also want to run a containerized database). As I mentioned
-above, however, there are some major disadvantages to this workflow,
-namely:
+We could stop here and simply build/tag our image on something like an [Amazon EC2](https://aws.amazon.com/pm/ec2/?trk=3fc1271f-8d0f-43b5-b177-4fba4b680f8b&sc_channel=ps&ef_id=Cj0KCQjwxo_CBhDbARIsADWpDH6HdxXQhD4ak0eJJAqCVN5eFLT5_7EWFqYI4bspQOmFkVx02Rx6ZzAaAkTzEALw_wcB:G:s&s_kwcid=AL!4422!3!645125292218!e!!g!!amazon%20ec2!19574556935!145779863272&gad_campaignid=19574556935&gbraid=0AAAAADjHtp9rnwJ4i4jv-vPFXc2FdsLHV&gclid=Cj0KCQjwxo_CBhDbARIsADWpDH6HdxXQhD4ak0eJJAqCVN5eFLT5_7EWFqYI4bspQOmFkVx02Rx6ZzAaAkTzEALw_wcB) or [Google Compute Engine](https://cloud.google.com/products/compute?_gl=1*1gb9n3w*_up*MQ..&gclid=Cj0KCQjwxo_CBhDbARIsADWpDH73h2HXq_uswMYE6nBopvStj3Em3itgoHrm-QA-BVKFcFmVEPlrvvQaAmjnEALw_wcB&gclsrc=aw.ds) instance by SSHing in, pulling the latest image down and running docker commands to start up the container. However, there are some major disadvantages to this workflow:
 
 1. A lot of manual steps
 2. App downtime while you are bringing it down and spinning it up again
@@ -186,11 +153,8 @@ namely:
 
 So, let's use k8s to spin up a few instances of our container. But first some
 quick k8s basics.
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 6/20
-
-k8s Architecture
+## k8s Architecture
 
 Let's discuss a few major k8s concepts, including k8s objects. First, a cluster.
 A cluster contains:
