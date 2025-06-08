@@ -54,7 +54,7 @@ repository, and restart the service.
 Even if you don't need it, it may be worth exploring k8s because it's become
 such a ubiquitous and influential tool in devops.
 
-## Let’s Go
+## Let's Go
 
 We're going to take a quick tour of k8s basics by building a toy app. We'll
 build an Expressjs server, containerize it and run it in a local k8s cluster.
@@ -156,43 +156,38 @@ quick k8s basics.
 
 ## k8s Architecture
 
-Let's discuss a few major k8s concepts, including k8s objects. First, a cluster.
-A cluster contains:
+Let's discuss a few major k8s concepts, including  objects. k8s  is modular and is composed of units such as a "cluster".
 
-a set of node machines, which contain pods. Pods are the atomic unit of k8s
-and contain one or more images. A node could be a real machine or a VM.
-The pod is an abstraction for a worker machine.
-A control plane, which is responsible for maintaining the desired state of
-the pods.
+A cluster, for example, is a group of machines (called nodes--which are another kind of object) that work together to run your application. Each node can run multiple pods (again, another object).
 
-Generally we use kubectl to interact with our cluster, which is a CLI for
+Pods are the smallest deployable units in k8s. Each pod can run one or more containers
+(like Docker containers). Think of a node as a physical or virtual machine, and pods as
+the applications running on that machine. The cluster also includes a control plane,
+which manages and coordinates all the pods to ensure they're running as desired.
+
+Other k8s objects include (but aren't limited to):
+
+- deployments
+- services
+- secrets
+- jobs
+
+Generally, we use kubectl to interact with our cluster, which is a CLI for
 communicating via the cluster's API. Setting up an on-premise k8s cluster is
 complex; it's usually only done when there's a specific requirement to run on
 premise, perhaps for security reasons. It's usually much easier to run a local
 cluster for development/testing/CI using a tool like Docker Desktop,
 minikube, kind etc. The local k8s cluster tool you choose depends on your
-requirements. For this post we are using minikube. In production most people
-will use a turn-key solution, like Google Kubernetes Engine (GKE).
+requirements. For this post we are using [minikube](https://minikube.sigs.k8s.io/docs/). In production most people
+will use a turn-key solution, like [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine?hl=en) (GKE).
 
-k8s is modular. We work in terms of objects. For example, our app might
-include the following k8s objects:
 
-pods
-deployments
-services
-secrets
-etc.
+We can create objects imperatively using kubectl, or declaratively with yaml
+files (manifests). The advantage of a declarative configuration is we can commit these manifests to source
+control and thus the cluster is reprodicible/auditable.
 
-We can create these imperatively using kubectl, or declaratively with yaml
-files (manifests) and simply point kubectl at the manifests. The big advantage
-of declarative configuration is we can commit these manifests to source
-control, and it becomes very easy for another developer, a CI system, or a
-production system to re-recreate the state of the cluster.
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
+## Creating a Deployment
 
-https://aaroncohen.io/exploring-kubernetes/ 7/20
-
-Creating a Deployment
 We can create the pods that will run our express app directly, but because we
 want to deploy these pods, instead we will write a deployment manifest that
 describes how to deploy these pods. The pods' spec are handled by the
