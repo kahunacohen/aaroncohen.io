@@ -172,7 +172,7 @@ Other k8s objects include (but aren't limited to):
 - secrets
 - jobs
 
-Generally, we use kubectl to interact with our cluster, which is a CLI for
+We can use kubectl to interact with our cluster, which is a CLI for
 communicating via the cluster's API. Setting up an on-premise k8s cluster is
 complex; it's usually only done when there's a specific requirement to run on
 premise, perhaps for security reasons. It's usually much easier to run a local
@@ -188,12 +188,12 @@ control and thus the cluster is reprodicible/auditable.
 
 ## Creating a Deployment
 
-We can create the pods that will run our express app directly, but because we
-want to deploy these pods, instead we will write a deployment manifest that
-describes how to deploy these pods. The pods' spec are handled by the
+We could create the pods that will run our express app directly, but usually we write a higher level deployment manifest that
+describes how to deploy pods. The pods' spec are handled by the
 deployment manifest, so we don't have to define the pods separately.
 Let's start up minikube, which creates a local cluster:
 
+```
 $ minikube start
 minikube v1.22.0 on Darwin 11.2.3
 Using the docker driver based on existing profile
@@ -208,30 +208,30 @@ Using image gcr.io/k8s-minikube/storage-provisioner:v5
 Using image kubernetesui/metrics-scraper:v1.0.4
 Enabled addons: storage-provisioner, default-storageclass, dashboard
 Done! kubectl is now configured to use "minikube" cluster and "default" name
+```
 
-An important word about minikube: There are many ways to run local
-k8s clusters. The simplest way is to use docker desktop and enable
-kubernetes. That works for very simple clusters. For this series we are using
-minikube because it allows us to use a LoadBalancer and it is more
-appropriate for things like managing encrypted data.
+> An important word about minikube: There are many ways to run local
+> k8s clusters. The simplest way is to use docker desktop and enable
+> kubernetes. That works for very simple clusters. For this series we are using
+> minikube because it allows us to use a LoadBalancer and it is more
+> appropriate for things like managing encrypted data.
 
 Minikube runs inside its own VM so we must connect kubectl to minikube so
 we can see images we created in minikube's context.
 
 To do this run:
 
+```
 $ eval $(minikube docker-env)
+```
 
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 8/20
-
-minikube docker-env prints out the env vars needed to connect kubectl, but
+This works because minikube docker-env prints out the env vars needed to connect kubectl, but
 you must evaluate them in the active terminal session for this to work.
 
-Ensure the k8s context is set to minikube. This ensures we are using our local
+Now ensure the k8s context is set to minikube. This ensures we are using our local
 cluster created by docker-desktop:
 
+```
 $ kubectl config get-contexts
 CURRENT NAME CLUSTER AUTHINFO NAMESPACE
 
@@ -239,40 +239,42 @@ docker-desktop docker-desktop docker-desktop
 kind-mycluster kind-mycluster kind-mycluster
 
 * minikube minikube minikube default
+```
 
 Your terminal output will likely be different than mine. If minikube is not set
 as your context, then do:
 
+```
 $ kubectl config use-context minikube
 Switched to context "minikube".
+```
 
-Now create a manifests directory (just to keep things organized) and create
-manifests/web-deployment.yaml:
+Now create a `manifests` directory (just to keep things organized) and create
+the file: `manifests/web-deployment.yaml`:
 
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 9/20
-
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-name: web-deployment
+  name: web-deployment
 spec:
-replicas: 2
-selector:
-matchLabels:
-app: web-pod
-template:
-metadata:
-labels:
-app: web-pod
-spec:
-containers:
-- name: web
-image: kahunacohen/hello-k8s
-ports:
-- containerPort: 3000
-protocol: TCP
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-pod
+  template:
+    metadata:
+      labels:
+        app: web-pod
+    spec:
+      containers:
+        - name: web
+          image: kahunacohen/hello-k8s
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+
+```
 
 Use kubectl to create the deployment using the manifest::
 
