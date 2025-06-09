@@ -276,99 +276,92 @@ spec:
 
 ```
 
-Use kubectl to create the deployment using the manifest::
+Now use kubectl to create the deployment using the manifest:
 
+```
 $ kubectl create -f manifests/web-deployment.yaml`
 deployment.apps/web-deployment created
+```
 
-In essence the deployment object is a wrapper for two lower level objects, pods
-and ReplicaSets, which you could create separately. In our case the
+In essence, the deployment object is a wrapper for two lower level objects, pods
+and ReplicaSets, which you *could* create separately. In our case the
 deployment object we created implicitly creates two pods and a ReplicaSet.
 The ReplicaSet's job is to maintain a set of replica pods.
 
 Now that we created our deployment, we can list the pods:
 
-# The port the containers are running on interna
-
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 10/20
-
+```
 $ kubectl get pods
 web-deployment-5bb9d846b6-m5nvk 1/1 Running 0 2m23s
 web-deployment-5bb9d846b6-rv2kt 1/1 Running 0 2m23s
+```
 
 This tells us there are two pods, which are owned by web-deployment. If we
 inspect one of them we should see our container (among other details):
 
+```
 $ kubectl inspect pods web-deployment-5bb9d846b6-m5nvk
 ...
 Containers:
-web:
-Container ID: docker://c5e24583fa6942f8d4f791281bbf756d06add13d55f52115a
-Image: kahunacohen/hello-k8s
-Image ID: docker-pullable://kahunacohen/hello-kube@sha256:25b2e36992
-Port: 3000/TCP
+    web:
+        Container ID: docker://c5e24583fa6942f8d4f791281bbf756d06add13d55f52115a
+        Image: kahunacohen/hello-k8s
+        Image ID: docker-pullable://kahunacohen/hello-kube@sha256:25b2e36992
+        Port: 3000/TCP
 ...
+```
 
-We can exec into the pod, just like we would using docker (don't forget to
-replace the pod name with one of the pod names you got from doing kubectl
-get pods):
+We can exec into the pod, just like we would using docker. Here, we are `ls`ing the `/code` directory:
 
+```
 $ kubectl exec --stdin --tty web-deployment-5bb9d846b6-m5nvk -- /bin/bash
-root@web-deployment-5bb9d846b6-m5nvk:/code
+root@web-deployment-5bb9d846b6-m5nvk:/code# ls code
 node_modules package-lock.json package.json server.js
+```
 
-Creating a Service
+## Creating a Service
 Great, now how do we view our app? Currently the nodes are exposed inside
 the cluster at ephemeral IPs. We need a service object, which is a k8s object
-that abstracts exposing a set of pods on the host network. Create
-manifests/web-service.yaml:
+that abstracts exposing a set of pods on the host network. Create `manifests/web-service.yaml`:
 
-# ls /code/
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 11/20
-
+```yaml
 apiVersion: v1
 kind: Service
 metadata:
-name: web-service
+  name: web-service
 spec:
-type: NodePort
-selector:
-app: web-pod
-ports:
-- port: 80
-targetPort: 3000
-protocol: TCP
-name: http
+  type: NodePort
+  selector:
+    app: web-pod
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+```
 
-and
+and then:
 
+```
 $ kubectl create -f manifests/web-service.yaml
+```
 
 and finally:
 
+```
 $ kubectl get services
 NAME TYPE CLUSTER-IP EXTERNAL-IP PORT(S) AGE
 kubernetes ClusterIP 10.96.0.1 <none> 443/TCP 10d
 web-service NodePort 10.107.232.55 <none> 80:30543/TCP 76s
+```
 
-You can find a deeper explanation of the service manifest here. The NodePort
-type is one of several options including:
+You can find a deeper explanation of the service manifest [here](https://kubernetes.io/docs/concepts/services-networking/service/). The `NodePort` type is one of several options including:
 
-1. ClusterIP: useful for exposing pods internally within the cluster.
-2. LoadBalancer: useful in a production environment, such as AWS or GCE.
+1. `ClusterIP`: useful for exposing pods internally within the cluster.
+2. `LoadBalancer`: useful in a production environment, such as AWS or GCE.
 
-The NodePort type we are using is mostly used in development. It forwards
-requests from outside the cluster to inside and is randomly chosen between a
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 12/20
-
-range of ports. The important thing to note is this sequence of requests this
-service allows. In our case a request comes in to our docker desktop cluster at:
+The `NodePort` type we are using is mostly used in development. It forwards
+requests from outside the cluster to inside and is randomly chooses from a range of ports. The important thing to note is this sequence of requests this service allows. In our case a request comes in to our docker desktop cluster at:
 
 1. localhost:30543 ...which forwards requests to:
 2. ...our service to an internal IP at port 80. The service selects pods as per the
@@ -380,76 +373,78 @@ where are service is. So if we go to: http://localhost:30543, we should see
 our express app. Except we don't! If we were using docker desktop as our local
 cluster, we could, but minikube is a bit more complex in that it more closely
 resembles a production cluster (it allows load balancers etc.). With minikube
-we have one more bit of redirection to see our app because we have to tunnel
+we have one more bit of redirection to do to see our app because we have to tunnel
 into its VM. Do:
 
+```
 $ minikube service web-service
+```
 
 This should tunnel in and open up a tab where the app renders.
 
-Bring Down a Pod
-Let's test the ReplicaSet that the deployment implicitly created by killing a
+## Bring Down a Pod
+Let's test the `ReplicaSet` that the deployment implicitly created by killing a
 pod and see what happens:
 
+```
 $ kubectl get pods
 web-deployment-fdc6dddb7-9vb9s 1/1 Running 0 5h18m
 web-deployment-fdc6dddb7-tnhzd 1/1 Running 0 5h18m
+```
 
 Indeed, two pods are running. Kill one:
 
+```
 $ kubectl delete pods web-deployment-fdc6dddb7-9vb9s
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 13/20
+```
 
 We can see the pod we killed is in the process of terminating, and there's a
-new pod already running to take its place. That's the ReplicaSet in action:
+new pod already running to take its place. That's the `ReplicaSet` in action,
 maintaining the desired state of the cluster. Now a bit later we'll see the pod
 we killed is gone, replaced entirely by a new one:
 
+```
 kubectl get pods
 web-deployment-fdc6dddb7-n4pf8 1/1 Running 0 2m27s
 web-deployment-fdc6dddb7-tnhzd 1/1 Running 0 5h22m
+```
 
-Non-sensitive Run-time Data
+## Non-sensitive Run-time Data
 
 A great place to keep non-sensitive, run-time configuration is in
 environment variables. Traditionally we've set them when the OS starts
 up, perhaps in a .env file deployed along with the app.
-It's import to understand the security implications of environment variables.
+It's important to understand the security implications of environment variables.
 While setting sensitive data in environment variables may be more secure
 than hard-coding them in source code, it's still bad practice because they are
-easily leaked via logs, and/or third-party dependencies could read them and
-"phone home." We'll discuss managing sensitive data later in k8s, but just
+easily leaked via logs. Third-party dependencies could read them and
+"phone home." We'll discuss managing sensitive data later, but just
 know that for now we are only going to store non-sensitive data in
 environment variables for our run-time configuration.
 
 If you wanted to set env vars for our project, you could explicitly create a pod
-manifest file and set them there. A better way may be to use the ConfigMap
-object. This decouples your
-
-configuration from your pods/images and allows them to be more easily re-
+manifest file and set them there. A better way is to use the `ConfigMap`
+object. This decouples your configuration from your pods/images and allows them to be more easily re-
 used.
 
 Create a web-configmap.yaml file and put it in manifests:
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 14/20
-
+```yaml
 apiVersion: v1
-data:
-MY_NON_SECRET: foo
-MY_OTHER_NON_SECRET: bar
 kind: ConfigMap
 metadata:
-name: web-configmap
-namespace: default
+  name: web-configmap
+  namespace: default
+data:
+  MY_NON_SECRET: foo
+  MY_OTHER_NON_SECRET: bar
+```
 
 Now do:
 
+```
 $ kubectl create -f manifests/web-configmap.yaml
 configmap/web-configmap created
-$
 $ kubectl describe configmap web-configmap
 Name: web-configmap
 Namespace: default
@@ -465,160 +460,160 @@ MY_OTHER_NON_SECRET:
 ----
 bar
 Events: <none>
+```
 
-Great, so now our config data is created as just another k8s object. There are
+Now our config data is created as just another k8s object. There are
 several ways to consume this data from our pods, one of which is via env vars.
 Let's add the envFrom block to our web-deployment.yaml to map the pod to the
 configmap:
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 15/20
-
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-name: web-deployment
+  name: web-deployment
 spec:
-replicas: 2
-selector:
-matchLabels:
-app: web-pod
-template:
-metadata:
-labels:
-app: web-pod
-spec:
-containers:
-- name: web
-image: kahunacohen/hello-k8s
-envFrom:
-- configMapRef:
-name: web-configmap
-ports:
-- containerPort: 3000
-protocol: TCP
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-pod
+  template:
+    metadata:
+      labels:
+        app: web-pod
+    spec:
+      containers:
+        - name: web
+          image: kahunacohen/hello-k8s
+          envFrom:
+            - configMapRef:
+                name: web-configmap
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+```
 
 Then do:
 
+```
 kubectl replace -f manifests/web-deployment.yaml
 deployment.apps/web-deployment replaced
+```
 
-Here we use the replace command to update the deployment in-place. There
-is no service
+Here we use the replace command to update the deployment in-place. There is no service
 outage because, even while k8s updates the deployment, it always maintains
-the desired state of two pods running. If you check the pods with kubectl get
-pods you can see how the state of the cluster changes until the new pods are
+the desired state of two pods running. If you check the pods with `kubectl get
+pods` you can see how the state of the cluster changes until the new pods are
 running and the old ones are terminated.
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 16/20
+Now when you go to `localhost:{NodePort}` you should see:
 
-Now when you go to localhost:{NodePort} you should see:
-
+```
 MY_NON_SECRET: "foo"
 MY_OTHER_NON_SECRET: "bar"
+```
 
-Jobs
+## Jobs
 
-A very useful k8s object is jobs, specifically cronjobs, which are merely
-scheduled jobs.
+A job is another useful k8s object
+
 Jobs are created like any other object in k8s. Every job is run in a new pod,
 and they stick around. You can customize how many pods are kept etc. in the
 manifest.
 
-Let's try it. Create manifests/print-hello.yaml:
+Let's try it. Let's create a specific kind of job, `CronJob`: Create `manifests/print-hello.yaml`:
 
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 17/20
-
+```yaml
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-name: print-hello
+  name: print-hello
 spec:
-schedule: "*/5 * * * *"
-successfulJobsHistoryLimit: 2
-failedJobsHistoryLimit: 2
-jobTemplate:
-spec:
-template:
-spec:
-containers:
-- name: print-hello
-image: kahunacohen/hello-kube:latest
-imagePullPolicy: IfNotPresent
-command:
-- /bin/sh
-- -c
-- date; echo Hello from the Kubernetes cluster
-restartPolicy: OnFailure
+  schedule: "*/5 * * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: print-hello
+              image: kahunacohen/hello-kube:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+```
 
 This will create a pod every 5 minutes, printing out the date and the message
 as specified in the command block. It will only keep the two most recent pods--
 the rest will be destroyed.
 
-Let's create it:
+Let's activate it:
 
+```
 $ kubectl create -f manifests/print-hello.yaml
 $
 $ kubectl get jobs
 NAME COMPLETIONS DURATION AGE
 hello-27114520 1/1 9s 80s
+```
 
 We can see a pod was created for this job:
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
 
-https://aaroncohen.io/exploring-kubernetes/ 18/20
-
+```
 $ kubectl get pods
 NAME READY STATUS RESTA
 hello-27114520-4wnmf 0/1 Completed 0
 web-deployment-65b8bccdfd-bb54g 1/1 Running 1 18h
 web-deployment-65b8bccdfd-mfwx8 1/1 Running 1 18h
+```
 
 And we can ask the pod for logs so we can see the output:
 
+```
 $ kubectl logs hello-27114520-4wnmf
 Wed Jul 21 12:40:09 UTC 2021
 Hello from the Kubernetes cluster
+```
 
 Very cool!
 
-Updating App Code
-When we updated the deployment with the ConfigMap we saw that there was
+## Updating App Code
+When we updated the deployment with the `ConfigMap` we saw that there was
 no down-time. k8s maintained the desired state of the pods. Once the
 deployment was replaced, the config variables became defined and were
 rendered.
 
 But how do we actually update the app, not just the deployment? A few things
 trigger k8s to redeploy your actual app. The main way we trigger this is by
-setting a new image via kubectl's set image command. The workflow is:
+setting a new image via kubectl's `set image` command. The workflow is:
 
 1. Make a change to your app code.
 2. Rebuild a new image, tagging it with a new version.
 3. Push both the newly tagged image to an image repo.
-4. Call kubectl set image to set the deployment to the new image.
-3/5/25, 3:32 PM Exploring Kubernetes – aaroncohen.io
-
-https://aaroncohen.io/exploring-kubernetes/ 19/20
+4. Call `kubectl set image` to set the deployment to the new image.
 
 Let's see this in detail:
 
-1. In server.js, change the header "Kubernetes Expressjs Example" to
+1. In `server.js`, change the header "Kubernetes Expressjs Example" to
 "Kubernetes Expressjs Example 123". If you go to localhost:
 {NODE_PORT}, you won't see your change because the deployment is still
 using the last image built.
 2. Now, build a new image and tag it:
-$ docker build -t {DOCKER_HUB_USERNAME}}/hello-k8s:0.0.1
+`$ docker build -t {DOCKER_HUB_USERNAME}}/hello-k8s:0.0.1`
 3. Push the tag:
-docker push {DOCKER_HUB_USERNAME}/hello-k8s:0.0.1
+`docker push {DOCKER_HUB_USERNAME}/hello-k8s:0.0.1`
 4. Now we need to set the existing deployment's image to the new tag: 0.0.1,
-selecting
-the container labeled "web" to replace:
+selecting the container labeled "web" to replace:
 
+```
 $ kubectl set image deployment/web-deployment web=kahunacohen/hello-k8s:0.0.1
 deployment.apps/web-deployment image updated
+```
 
 Now if we do kubectl get pods we should see that k8s is resolving the current
 state to the desired state, terminating the existing pods, while creating new
