@@ -21,7 +21,7 @@ echo "📦 Initializing Git submodules..."
 git submodule update --init --recursive
 
 # Verify theme directory
-if [ ! -d "themes/ananke" ]; then
+if [ ! -d "themes/hugo-coder" ]; then
     echo "❌ Theme directory not found. Something went wrong with submodule initialization."
     exit 1
 fi
